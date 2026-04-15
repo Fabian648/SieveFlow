@@ -5,7 +5,7 @@ import java.math.BigInteger;
 
 public class PrimeBlock {
 
-    private static final int BLOCK_SIZE = 10_000;
+    public static final int BLOCK_SIZE = 10_000;
 
     private BitSet bitSet;
     private BigInteger start_block;
