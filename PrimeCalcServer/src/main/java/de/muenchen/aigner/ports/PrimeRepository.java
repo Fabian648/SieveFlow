@@ -3,6 +3,7 @@ package de.muenchen.aigner.ports;
 import de.muenchen.aigner.domain.model.PrimeBlock;
 
 import java.math.BigInteger;
+import java.util.List;
 import java.util.Optional;
 
 public interface PrimeRepository {
@@ -10,4 +11,5 @@ public interface PrimeRepository {
     Optional<PrimeBlock> getBlock(BigInteger blockIndex);
     BigInteger getMaxCalculatedNumber();
 
+    List<BigInteger> getPrimesUpTo(BigInteger limit);
 }

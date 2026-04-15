@@ -4,6 +4,7 @@ import de.muenchen.aigner.domain.model.PrimeBlock;
 import de.muenchen.aigner.ports.PrimeRepository;
 
 import java.math.BigInteger;
+import java.util.List;
 
 public class PrimeService {
     private final PrimeRepository repository;
@@ -57,7 +58,22 @@ public class PrimeService {
                 }
             }
         }else{
+            BigInteger limit = block.getEndBlock().sqrt();
+            List<BigInteger> basePrime = repository.getPrimesUpTo(limit);
 
+            for(BigInteger p : basePrime) {
+                BigInteger firstMultiple = block.getStartBlock()
+                        .add(p).subtract(BigInteger.ONE)
+                                .divide(p).multiply(p);
+                if(firstMultiple.equals(p)){
+                    firstMultiple = firstMultiple.add(p);
+                }
+                for (BigInteger j = firstMultiple; j.compareTo(block.getEndBlock()) <= 0; j = j.add(p)) {
+
+                    int indexInBitSet = j.subtract(block.getStartBlock()).intValue();
+                    block.getBitSet().clear(indexInBitSet);
+                }
+            }
         }
     }
 }
