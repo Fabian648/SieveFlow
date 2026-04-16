@@ -1,6 +1,7 @@
 package de.muenchen.aigner;
 
 import de.muenchen.aigner.adapters.db.InMemoryPrimeRepository;
+import de.muenchen.aigner.adapters.network.TCPServerAdapter;
 import de.muenchen.aigner.domain.service.PrimeService;
 import de.muenchen.aigner.ports.PrimeRepository;
 
@@ -16,10 +17,13 @@ public class Main {
         // 2. Service mit Adapter initialisieren
         PrimeService primeService = new PrimeService(repository);
 
+        TCPServerAdapter server = new  TCPServerAdapter(primeService);
+
+        server.start();
         // 3. Test-Abfragen
-        check(primeService, "7");
-        check(primeService, "10");
-        check(primeService, "1756983"); // Das wird das Sieve triggern!
+//        check(primeService, "7");
+//        check(primeService, "10");
+//        check(primeService, "1756983"); // Das wird das Sieve triggern!
     }
 
     private static void check(PrimeService service, String num) {
