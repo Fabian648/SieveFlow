@@ -19,7 +19,7 @@ public class Main {
         // 3. Test-Abfragen
         check(primeService, "7");
         check(primeService, "10");
-        check(primeService, "2500000"); // Das wird das Sieve triggern!
+        check(primeService, "1756983"); // Das wird das Sieve triggern!
     }
 
     private static void check(PrimeService service, String num) {

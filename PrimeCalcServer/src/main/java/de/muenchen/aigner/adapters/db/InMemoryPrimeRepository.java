@@ -12,7 +12,7 @@ public class InMemoryPrimeRepository implements PrimeRepository {
 
     @Override
     public void saveBlock(PrimeBlock block) {
-        // Wir berechnen den Index: Start / 10.000
+        // berechnen den Index: Start / 10.000
         BigInteger index = block.getStartBlock().divide(BigInteger.valueOf(PrimeBlock.BLOCK_SIZE));
         storage.put(index, block);
 
@@ -36,7 +36,6 @@ public class InMemoryPrimeRepository implements PrimeRepository {
     public List<BigInteger> getPrimesUpTo(BigInteger limit) {
         // Diese Methode braucht der Service für das Sieve-Verfahren
         List<BigInteger> primes = new ArrayList<>();
-        // Wir gehen durch alle gespeicherten Blöcke und sammeln Primzahlen ein
         for (PrimeBlock block : storage.values()) {
             for (int i = 0; i < PrimeBlock.BLOCK_SIZE; i++) {
                 if (block.getBitSet().get(i)) {
