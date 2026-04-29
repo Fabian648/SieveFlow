@@ -63,7 +63,13 @@ cd BitSieve/PrimeCalcServer
 
 # Kompilieren (falls Gradle genutzt wird)
 ./gradlew build
-``` 
+```
+
+## 🐳 Schnellstart mit Docker
+Der einfachste Weg, BitSieve inklusive Datenbank zu starten:
+```bash
+docker compose up --build
+```
 ---
 
 ## 📅 Roadmap
@@ -74,8 +80,8 @@ cd BitSieve/PrimeCalcServer
 
 - [x] TCP-Server mit Virtual Threads
 
-- [ ] PostgreSQL Adapter für dauerhafte Speicherung
+- [x] PostgreSQL Adapter für dauerhafte Speicherung
 
-- [ ] Docker-Compose Setup
+- [x] Docker-Compose Setup
 
 - [ ] Web-Interface (Spring Boot Adapter)
