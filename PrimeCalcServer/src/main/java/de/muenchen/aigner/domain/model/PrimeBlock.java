@@ -29,6 +29,10 @@ public class PrimeBlock {
         return end_block;
     }
 
+    public void setBitSet(BitSet bitSet) {
+        this.bitSet = bitSet;
+    }
+
     public String getString() {
         return "Start: %s, Ende: %s, Gesetzte Bits: %d"
                 .formatted(start_block, end_block, bitSet.cardinality());

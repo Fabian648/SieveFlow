@@ -13,8 +13,24 @@ dependencies {
     testImplementation platform('org.junit:junit-bom:5.10.0')
     testImplementation 'org.junit.jupiter:junit-jupiter'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+
+    implementation 'org.postgresql:postgresql:42.7.3'
+    implementation 'com.zaxxer:HikariCP:5.1.0'
+    implementation 'org.slf4j:slf4j-simple:2.0.12'
 }
 
 test {
     useJUnitPlatform()
+}
+
+jar{
+    manifest{
+        attributes(
+                'Main-Class': 'de.muenchen.aigner.Main'
+        )
+    }
+    from {
+        configurations.runtimeClasspath.collect{ it.isDirectory() ? it : zipTree(it)}
+    }
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 }
