@@ -12,8 +12,7 @@
 
 - **Hexagonale Architektur**: Der Kern ist vollständig unabhängig von der Datenbank oder dem Übertragungsprotokoll.
 
-- **In-Memory & Persistenz**: Aktuell unterstützt der Server ein In-Memory-Repository für schnelle Tests (PostgreSQL-Anbindung in Arbeit).
-
+- **In-Memory & Persistenz**: Unterstützt sowohl ein flüchtiges In-Memory-Repository für schnelle lokale Tests als auch eine persistente PostgreSQL-Datenbank. Die Anbindung erfolgt effizient über HikariCP Connection Pooling.
 ---
 
 ## 🛠 Architektur
