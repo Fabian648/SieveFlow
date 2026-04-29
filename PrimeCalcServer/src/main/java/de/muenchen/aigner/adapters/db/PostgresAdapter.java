@@ -1,24 +1,48 @@
 package de.muenchen.aigner.adapters.db;
 
+import com.zaxxer.hikari.HikariConfig;
+import com.zaxxer.hikari.HikariDataSource;
+
 import de.muenchen.aigner.domain.model.PrimeBlock;
 import de.muenchen.aigner.ports.PrimeRepository;
 
+import javax.sql.DataSource;
+import java.io.InputStream;
 import java.math.BigInteger;
 import java.sql.*;
-import java.util.ArrayList;
-import java.util.BitSet;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 
 public class PostgresAdapter implements PrimeRepository {
 
-    private final String url = "jdbc:postgresql://localhost:5432/bitsieve";
-    private final String user = "user";
-    private final String password = "password";
+    private final DataSource dataSource;
 
     public PostgresAdapter() {
-        // Initialisiere die Tabelle, falls sie nicht existiert
-        try (Connection conn = DriverManager.getConnection(url, user, password);
+        // 1. Konfiguration aus Datei laden
+        Properties props = new Properties();
+        try (InputStream is = getClass().getClassLoader().getResourceAsStream("application.properties")) {
+            props.load(is);
+        } catch (Exception e) {
+            throw new RuntimeException("Konnte application.properties nicht laden", e);
+        }
+
+        // 2. Hikari Connection Pool konfigurieren
+        HikariConfig config = new HikariConfig();
+        config.setJdbcUrl(props.getProperty("db.url"));
+        config.setUsername(props.getProperty("db.user"));
+        config.setPassword(props.getProperty("db.password"));
+        config.setMaximumPoolSize(Integer.parseInt(props.getProperty("db.pool.size")));
+
+        // Optimierungen für Postgres
+        config.addDataSourceProperty("cachePrepStmts", "true");
+        config.addDataSourceProperty("prepStmtCacheSize", "250");
+
+        this.dataSource = new HikariDataSource(config);
+
+        initDatabase();
+    }
+
+    private void initDatabase() {
+        try (Connection conn = dataSource.getConnection();
              Statement stmt = conn.createStatement()) {
             stmt.execute("""
                 CREATE TABLE IF NOT EXISTS prime_blocks (
@@ -29,24 +53,20 @@ public class PostgresAdapter implements PrimeRepository {
                 )
             """);
         } catch (SQLException e) {
-            throw new RuntimeException("DB Initialization failed", e);
+            throw new RuntimeException("DB Init fehlgeschlagen", e);
         }
     }
 
     @Override
     public void saveBlock(PrimeBlock block) {
-        String sql = "INSERT INTO prime_blocks (block_index, start_number, end_number, bits) VALUES (?, ?, ?, ?) " +
-                "ON CONFLICT (block_index) DO NOTHING";
-
-        BigInteger index = block.getStartBlock().divide(BigInteger.valueOf(10000));
-
-        try (Connection conn = DriverManager.getConnection(url, user, password);
+        String sql = "INSERT INTO prime_blocks (block_index, start_number, end_number, bits) VALUES (?, ?, ?, ?) ON CONFLICT DO NOTHING";
+        try (Connection conn = dataSource.getConnection(); // Holt Verbindung aus dem Pool
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
 
-            pstmt.setLong(1, index.longValue());
+            pstmt.setLong(1, block.getStartBlock().divide(BigInteger.valueOf(10000)).longValue());
             pstmt.setBigDecimal(2, new java.math.BigDecimal(block.getStartBlock()));
             pstmt.setBigDecimal(3, new java.math.BigDecimal(block.getEndBlock()));
-            pstmt.setBytes(4, block.getBitSet().toByteArray()); // Hier ist der Zauber!
+            pstmt.setBytes(4, block.getBitSet().toByteArray());
 
             pstmt.executeUpdate();
         } catch (SQLException e) {
@@ -58,19 +78,20 @@ public class PostgresAdapter implements PrimeRepository {
     public Optional<PrimeBlock> getBlock(BigInteger blockIndex) {
         String sql = "SELECT start_number, bits FROM prime_blocks WHERE block_index = ?";
 
-        try (Connection conn = DriverManager.getConnection(url, user, password);
+        // Geändert: dataSource.getConnection() statt DriverManager
+        try (Connection conn = dataSource.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
 
             pstmt.setLong(1, blockIndex.longValue());
-            ResultSet rs = pstmt.executeQuery();
+            try (ResultSet rs = pstmt.executeQuery()) {
+                if (rs.next()) {
+                    BigInteger start = rs.getBigDecimal("start_number").toBigInteger();
+                    byte[] bytes = rs.getBytes("bits");
 
-            if (rs.next()) {
-                BigInteger start = rs.getBigDecimal("start_number").toBigInteger();
-                byte[] bytes = rs.getBytes("bits");
-
-                PrimeBlock block = new PrimeBlock(start);
-                block.setBitSet(BitSet.valueOf(bytes));
-                return Optional.of(block);
+                    PrimeBlock block = new PrimeBlock(start);
+                    block.setBitSet(BitSet.valueOf(bytes));
+                    return Optional.of(block);
+                }
             }
         } catch (SQLException e) {
             e.printStackTrace();
@@ -81,7 +102,7 @@ public class PostgresAdapter implements PrimeRepository {
     @Override
     public BigInteger getMaxCalculatedNumber() {
         String sql = "SELECT MAX(end_number) FROM prime_blocks";
-        try (Connection conn = DriverManager.getConnection(url, user, password);
+        try (Connection conn = dataSource.getConnection();
              Statement stmt = conn.createStatement();
              ResultSet rs = stmt.executeQuery(sql)) {
 
@@ -97,24 +118,23 @@ public class PostgresAdapter implements PrimeRepository {
     @Override
     public List<BigInteger> getPrimesUpTo(BigInteger limit) {
         List<BigInteger> primes = new ArrayList<>();
-        // Wir laden alle Blöcke, die Primzahlen unter dem Limit enthalten könnten
         String sql = "SELECT start_number, bits FROM prime_blocks WHERE start_number <= ? ORDER BY block_index";
 
-        try (Connection conn = DriverManager.getConnection(url, user, password);
+        try (Connection conn = dataSource.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
 
             pstmt.setBigDecimal(1, new java.math.BigDecimal(limit));
-            ResultSet rs = pstmt.executeQuery();
+            try (ResultSet rs = pstmt.executeQuery()) {
+                while (rs.next()) {
+                    BigInteger start = rs.getBigDecimal("start_number").toBigInteger();
+                    BitSet bits = BitSet.valueOf(rs.getBytes("bits"));
 
-            while (rs.next()) {
-                BigInteger start = rs.getBigDecimal("start_number").toBigInteger();
-                BitSet bits = BitSet.valueOf(rs.getBytes("bits"));
-
-                for (int i = 0; i < 10000; i++) {
-                    if (bits.get(i)) {
-                        BigInteger p = start.add(BigInteger.valueOf(i));
-                        if (p.compareTo(limit) <= 0) {
-                            primes.add(p);
+                    for (int i = 0; i < PrimeBlock.BLOCK_SIZE; i++) {
+                        if (bits.get(i)) {
+                            BigInteger p = start.add(BigInteger.valueOf(i));
+                            if (p.compareTo(limit) <= 0) {
+                                primes.add(p);
+                            }
                         }
                     }
                 }
