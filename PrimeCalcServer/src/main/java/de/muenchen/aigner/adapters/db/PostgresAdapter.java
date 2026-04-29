@@ -20,17 +20,27 @@ public class PostgresAdapter implements PrimeRepository {
         // 1. Konfiguration aus Datei laden
         Properties props = new Properties();
         try (InputStream is = getClass().getClassLoader().getResourceAsStream("application.properties")) {
-            props.load(is);
+            if(is == null) {
+                props.load(is);
+            }
         } catch (Exception e) {
-            throw new RuntimeException("Konnte application.properties nicht laden", e);
+           // throw new RuntimeException("Konnte application.properties nicht laden", e);
         }
+        String dbUrl = System.getenv("DB_URL");
+        if(dbUrl == null || dbUrl.isEmpty()) {
+            dbUrl = props.getProperty("db.url", "jdbc:postgresql://localhost:5432/bitsieve");
+        }
+
+        String dbUser = props.getProperty("db.user", "user");
+        String dbPass = props.getProperty("db.password", "password");
 
         // 2. Hikari Connection Pool konfigurieren
         HikariConfig config = new HikariConfig();
-        config.setJdbcUrl(props.getProperty("db.url"));
-        config.setUsername(props.getProperty("db.user"));
-        config.setPassword(props.getProperty("db.password"));
-        config.setMaximumPoolSize(Integer.parseInt(props.getProperty("db.pool.size")));
+        config.setJdbcUrl(dbUrl);
+        config.setUsername(dbUser);
+        config.setPassword(dbPass);
+        config.setDriverClassName("org.postgresql.Driver");
+        config.setMaximumPoolSize(10);
 
         // Optimierungen für Postgres
         config.addDataSourceProperty("cachePrepStmts", "true");
