@@ -60,7 +60,7 @@ git clone https://github.com/Fabian648/BitSieve.git
 # In das Verzeichnis wechseln
 cd BitSieve/PrimeCalcServer
 
-# Kompilieren (falls Gradle genutzt wird)
+# Kompilieren
 ./gradlew build
 ```
 
